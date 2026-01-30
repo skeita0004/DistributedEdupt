@@ -1,116 +1,136 @@
 #include <iostream>
 #include <vector>
+#include <string>
+#include <conio.h>
 #include <WinSock2.h>
 #include <WS2tcpip.h>
-#pragma comment(lib, "ws2_32.lib")
 
-// edupt関連のヘッダ（プロジェクトの構成に合わせてパスを調整してください）
-// #include "edupt.h" 
+#pragma comment(lib, "ws2_32.lib")
 
 const unsigned short SERVER_PORT = 8888;
 
-// レンダリングタスクの構造体
-struct RenderTask {
-    int taskId;      // タスク番号
-    int startY;      // レンダリング開始行
-    int endY;        // レンダリング終了行
-    int width;       // 画像幅
-    int height;      // 画像高さ
+struct ClientInfo
+{
+    SOCKET sock;
+    std::string ip;
 };
 
-// 計算結果を受け取る構造体
-struct RenderResult {
-    int taskId;
-    // ここにeduptで計算された色データや座標などを含める
-};
+// サーバー自身のIPアドレスを取得する関数
+void ShowServerIP() 
+{
+    char hostname[256];
+    if (gethostname(hostname, sizeof(hostname)) == 0)
+    {
+        struct addrinfo hints = {}, * res = nullptr;
+        hints.ai_family = AF_INET; // IPv4
+        if (getaddrinfo(hostname, nullptr, &hints, &res) == 0)
+        {
+            std::cout << "   Server IP Addresses:" << std::endl;
+            for (auto curr = res; curr != nullptr; curr = curr->ai_next) 
+            {
+                char ipStr[INET_ADDRSTRLEN];
+                struct sockaddr_in* addr = (struct sockaddr_in*)curr->ai_addr;
+                inet_ntop(AF_INET, &addr->sin_addr, ipStr, sizeof(ipStr));
+                std::cout << "     >> " << ipStr << std::endl;
+            }
+            freeaddrinfo(res);
+        }
+    }
+}
 
 int main() {
     // 1. WinSock2.2 初期化
     WSADATA wsaData;
-    if (WSAStartup(MAKEWORD(2, 2), &wsaData) != 0) {
+    if (WSAStartup(MAKEWORD(2, 2), &wsaData) != 0)
+    {
         std::cerr << "WSAStartup failed." << std::endl;
         return -1;
     }
 
     // 2. リスンソケットの作成
     SOCKET listenSock = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
-    if (listenSock == INVALID_SOCKET) {
+    if (listenSock == INVALID_SOCKET) 
+    {
         WSACleanup();
         return -1;
     }
 
     // ノンブロッキング設定
-    /*
     unsigned long arg = 0x01;
     ioctlsocket(listenSock, FIONBIO, &arg);
-    */
+    
+    // アドレスの作成
+    SOCKADDR_IN addr = { 0 };
+    addr.sin_family = AF_INET;
+    addr.sin_port = htons(SERVER_PORT);
+    addr.sin_addr.s_addr = htonl(INADDR_ANY);
 
-    // 3. アドレスの割り当て
-    SOCKADDR_IN bindSockAddress = { 0 };
-    bindSockAddress.sin_family = AF_INET;
-    bindSockAddress.sin_port = htons(SERVER_PORT);
-    bindSockAddress.sin_addr.s_addr = htonl(INADDR_ANY);
+    bind(listenSock, (SOCKADDR*)&addr, sizeof(addr));
+    listen(listenSock, 5);
 
-    if (bind(listenSock, (SOCKADDR*)&bindSockAddress, sizeof(bindSockAddress)) == SOCKET_ERROR) {
-        closesocket(listenSock);
-        WSACleanup();
-        return -1;
-    }
+    std::vector<ClientInfo> connectedClients;
 
-    // 4. 接続待機
-    if (listen(listenSock, 5) == SOCKET_ERROR) {
-        closesocket(listenSock);
-        WSACleanup();
-        return -1;
-    }
+    // 初回画面
+    auto DisplayStatus = [&]()
+        {
+            system("cls");
+            std::cout << "--------------------------------------" << std::endl;
+            std::cout << "   Rendering Server Mode: [WAITING]   " << std::endl;
+            ShowServerIP(); // サーバーのIPアドレスを表示
+            std::cout << "--------------------------------------" << std::endl;
 
-    std::cout << "[Server] Rendering Server Started. Port: " << SERVER_PORT << std::endl;
-    std::cout << "[Server] Waiting for Worker PCs..." << std::endl;
-
-    // クライアント管理用
-    SOCKET clientSock;
-    SOCKADDR_IN clientAddr;
-    int addrLen = sizeof(clientAddr);
-
-    // 5. メインループ
-    bool running = true;
-    while (running) {
-        clientSock = accept(listenSock, (SOCKADDR*)&clientAddr, &addrLen);
-        if (clientSock != INVALID_SOCKET) {
-            char clientIP[INET_ADDRSTRLEN];
-            inet_ntop(AF_INET, &clientAddr.sin_addr, clientIP, sizeof(clientIP));
-            std::cout << "[Connect] Worker PC connected: " << clientIP << std::endl;
-
-            // --- ここでeduptを利用したタスク割り当て ---
-            RenderTask task = { 1, 0, 100, 800, 600 }; // 例：最初の100行を依頼
-
-            // ネットワークバイトオーダーへの変換（重要：マルチプラットフォーム/PC間通信のため）
-            RenderTask netTask = task;
-            netTask.taskId = htonl(task.taskId);
-            // ... 他のメンバもhtonl/htonsする ...
-
-            send(clientSock, (char*)&netTask, sizeof(netTask), 0);
-            std::cout << "[Task] Sent rendering task #" << task.taskId << " to worker." << std::endl;
-
-            // 結果の受信待ち
-            RenderResult result;
-            int ret = recv(clientSock, (char*)&result, sizeof(result), 0);
-            if (ret > 0) {
-                std::cout << "[Result] Received rendered data from task #" << ntohl(result.taskId) << std::endl;
-                // ここで受け取ったデータを1枚の画像メモリに書き込む等の処理
+            if (connectedClients.empty())
+            {
+                std::cout << "\n [Status]クライアントの接続を待っています..." << std::endl;
             }
+            else
+            {
+                std::cout << "\n Connected Clients: " << connectedClients.size() << std::endl;
+                std::cout << "   ------------------------------------------" << std::endl;
+                for (size_t i = 0; i < connectedClients.size(); ++i)
+                {
+                    std::cout << "    [" << i << "] IP: " << connectedClients[i].ip << std::endl;
+                }
+            }
+            std::cout << "\n   Press [Enter] to STOP accepting and START calculation..." << std::endl;
+        };
 
-            closesocket(clientSock); // 今回は1回ごとに終了する簡易例
+    DisplayStatus();
+
+    // --- クライアント接続受付フェーズ ---
+    while (true) 
+    {
+        SOCKADDR_IN clientAddr;
+        int addrLen = sizeof(clientAddr);
+        SOCKET newSock = accept(listenSock, (SOCKADDR*)&clientAddr, &addrLen);
+
+        if (newSock != INVALID_SOCKET) 
+        {
+            char ipStr[INET_ADDRSTRLEN];
+            inet_ntop(AF_INET, &clientAddr.sin_addr, ipStr, sizeof(ipStr));
+
+            ClientInfo info = { newSock, std::string(ipStr) };
+            connectedClients.push_back(info);
+
+            DisplayStatus(); // 接続があったので表示更新
         }
 
-        // サーバー終了条件（例として1回処理したら終了。実際はキー入力などで制御）
-        running = false;
+        if (_kbhit()) 
+        {
+            if (_getch() == 13) break;
+        }
+
+        Sleep(100);
     }
 
-    // 6. 終了処理
+    std::cout << "\n[System] 接続を締め切りました。計算フェーズに移行します。" << std::endl;
+
+    // --- 後処理（実際はここで計算命令を送信する） ---
+    for (auto& c : connectedClients) closesocket(c.sock);
     closesocket(listenSock);
     WSACleanup();
-    std::cout << "[Server] Shutdown." << std::endl;
 
+    std::cout << "Press any key to exit." << std::endl;
+    _getch();
     return 0;
 }
