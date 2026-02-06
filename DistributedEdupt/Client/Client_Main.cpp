@@ -49,8 +49,14 @@ int main() {
 
 	while(true) {
 		string ip;
-		cout << "\n接続先サーバーIP: ";
+		string portStr;
+		cout << "\n接続先サーバーIPを入力: ";
 		cin >> ip;
+		cout << "ポート番号を入力 (例: 8888): ";
+		cin >> portStr;
+
+		// 文字列のポートを数値に変換
+		unsigned short port = (unsigned short)stoi(portStr);
 
 		SOCKET sock = socket(AF_INET,SOCK_STREAM,0);
 		if(sock == INVALID_SOCKET) continue;
@@ -58,16 +64,17 @@ int main() {
 		SOCKADDR_IN addr;
 		memset(&addr,0,sizeof(addr));
 		addr.sin_family = AF_INET;
-		addr.sin_port = htons(8888);
+		addr.sin_port = htons(port); // 入力されたポートをセット
 		inet_pton(AF_INET,ip.c_str(),&addr.sin_addr.s_addr);
 
+		cout << "接続中..." << endl;
 		if(connect(sock,(SOCKADDR*)&addr,sizeof(addr)) == SOCKET_ERROR) {
-			cout << "接続失敗" << endl;
+			cout << "接続失敗。IPまたはポート番号、サーバーの状態を確認してください。" << endl;
 			closesocket(sock);
 			continue;
 		}
 
-		cout << "Connected! タスク待機中..." << endl;
+		cout << "Connected! タスクを待機中..." << endl;
 
 		while(true) {
 			//recv(sock, buf, 8)のやつ
@@ -76,13 +83,20 @@ int main() {
 			int hRet = recv(sock,headBuf,8,0);
 			if(hRet <= 0) break;
 
-			//ネットワークオーダーからホストオーダーへ変換
+			//Load(char* _p)
+			char* _p = headBuf; // ポインタ _p の作成
+
+			//_pの変換 net -> host (エンディアン)
 			int dataSize;
+			memcpy(&dataSize,_p,4);
+			dataSize = ntohl(dataSize); // net -> host変換
+
+			//4バイトずつ進め
+			_p += 4;
+
 			int state;
-			memcpy(&dataSize,headBuf,4);
-			memcpy(&state,headBuf + 4,4);
-			dataSize = ntohl(dataSize);
-			state = ntohl(state);
+			memcpy(&state,_p,4);
+			state = ntohl(state); // net -> host変換
 
 			// headerのsize分だけ本体（RenderTask）を受信
 			vector<char> bodyBuf(dataSize);
@@ -93,9 +107,9 @@ int main() {
 			RenderTask task;
 			memcpy(&task,bodyBuf.data(),sizeof(RenderTask));
 			int tid = ntohl(task.taskId);
-			int sY  = ntohl(task.startY);
-			int eY  = ntohl(task.endY);
-			int w   = ntohl(task.width);
+			int sY = ntohl(task.startY);
+			int eY = ntohl(task.endY);
+			int w = ntohl(task.width);
 
 			// 割り当てOKの返信 (ACK)
 			int ackId = htonl(tid);
