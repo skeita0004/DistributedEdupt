@@ -12,8 +12,6 @@
 
 namespace edupt
 {
-	// この辺をいじっていく必要がある(齋藤より)
-	// 引数長すぎなので、構造体を作る
 	int render(RenderData _renderData)
 	{
 		// カメラ位置(共通)
@@ -34,30 +32,27 @@ namespace edupt
 		const Vec screen_center = camera_position + camera_dir * screen_dist;
 
 		// レンダリング結果格納配列(非共通)
-		Color* image = new Color[_renderData.width * _renderData.height];
+		Color* image = new Color[_renderData.tileWidth * _renderData.tileHeight];
 
-		//std::cout << _renderData.width << "x" << _renderData.height << " " << _renderData.sample * (_renderData.superSample * _renderData.superSample) << " spp" << std::endl;
+		// TODO: OpenMPの追加
 
-		// OpenMP (検証用にいったんオフ)
-//		omp_set_num_threads(12);
-//#pragma omp parallel for schedule(static)
+		// グローバル座標ベース
+		int tileBottomY = _renderData.offsetY + _renderData.tileHeight;
+		int tileRightX  = _renderData.offsetX + _renderData.tileWidth;
 
-		// ここを変える
-		for (int y = 0; y < _renderData.height; y++)
+		for (int y = _renderData.offsetY; y < tileBottomY; y++)
 		{
-			// 進捗度表示
-			//std::cerr << "Rendering (y = " << y << ") " << (100.0 * y / (_renderData.height - 1)) << "%" << std::endl;
-			//printf("thread = %d\n", omp_get_thread_num());
-
-			// ここと
-			// ノイズがタイルごとに変わるので、画像の切れ目がわかってしまう。
-			Random rnd(y + 1);
-			
-			// ここも
-			for (int x = 0; x < _renderData.width; x++)
+			for (int x = _renderData.offsetX; x < tileRightX; x++)
 			{
-				const int image_index = (_renderData.tileHeight - y - 1) * _renderData.tileWidth + x;
+				int localY = y - _renderData.offsetY;
+				int localX = x - _renderData.offsetX;
+
+				// 左下原点にする
+				const int image_index = (_renderData.tileHeight - localY - 1) * _renderData.tileWidth + localX;
 				
+				uint32_t seed = y * _renderData.width + x;
+				Random rnd(seed + 1);
+
 				// _renderData.superSample x _renderData.superSample のスーパーサンプリング
 				// ここはタイルごとに同じ
 				for (int sy = 0; sy < _renderData.superSample; sy++)
@@ -90,7 +85,7 @@ namespace edupt
 						image[image_index] = image[image_index] + accumulated_radiance;
 
 						// return data
-						_renderData.imageArray[image_index] = image_index[image_index] + accumulated_radiance;
+						memcpy_s(_renderData.imageArray, _renderData.imageArraySize, image, sizeof(image));
 					}
 				}
 			}

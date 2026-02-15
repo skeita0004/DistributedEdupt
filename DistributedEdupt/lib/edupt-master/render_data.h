@@ -10,7 +10,7 @@ namespace edupt
 				   int _tileWidth, int _tileHeight,
 				   int _offsetX,   int _offsetY,
 				   int _sample,    int _superSample,
-				   int* _imageArray, int _imageArraySize) :
+				   Color* _imageArray, int _imageArraySize) :
 				   width(_width), height(_height),
 				   tileWidth(_tileWidth), tileHeight(_tileHeight),
 				   offsetX(_offsetX), offsetY(_offsetY),

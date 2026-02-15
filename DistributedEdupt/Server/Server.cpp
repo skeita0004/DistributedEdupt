@@ -80,7 +80,11 @@ void DisplayMessage(const std::vector<ClientInfo>& clients)
     std::cout << "Press Enter to stop accepting client connections..." << std::endl;
 }
 
-int main() {
+int main(int argc, char** argv)
+{
+    // 引数チェック
+
+
     // 1. WinSock2.2 初期化
     WSADATA wsaData;
     if (WSAStartup(MAKEWORD(2, 2), &wsaData) != 0)
@@ -143,6 +147,11 @@ int main() {
     std::cout << "\nStop Accept!" << std::endl;
     std::cout << "Transitioning to the calculation phase..." << std::endl;
 
+    // タイル分割処理
+    // 指定された画像の解像度から、タイルの分割サイズを割り出す
+    // 大体、64x64程度の正方タイルに分割、
+    // 大抵の解像度は、正方タイルで割り切ることができないので、
+    // 端っこの方は、正方タイルを諦める。
 
 	// タスクの初期化
 	std::vector<RenderTask> taskTable;
