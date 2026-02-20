@@ -41,15 +41,67 @@ void ShowMyIPAddresses()
 	}
 }
 
-int main()
+int main(int argc,char* argv[])
 {
+	string serverIP;
+	unsigned short serverPort;
 	WSADATA wsaData;
-	if(WSAStartup(MAKEWORD(2,2),&wsaData) != 0) return 1;
 
-	ShowMyIPAddresses();
+	//WinSock初期化
+	if(WSAStartup(MAKEWORD(2,2),&wsaData) != 0) return 1;
 
 	//届いたタスクを一時的に貯めておくキュー
 	queue<RenderTask> taskQueue;
+
+	//接続ループ
+	SOCKET sock = INVALID_SOCKET;
+	while(true)
+	{
+		//argv[0]がコマンド名、argv[1]がIP、argv[2]がポート番号の想定
+		//引数があるか、2回目以降の再試行かで分岐
+		if(argc == 3) {
+			//初回かつ引数がある場合
+			serverIP = argv[1];
+			serverPort = (unsigned short)atoi(argv[2]);
+			cout << "コマンドライン引数を使用します: " << serverIP << ":" << serverPort << endl;
+			//一度試行したら、失敗時に手入力へ移行するためargcをリセット
+			argc = 0;
+		} else {
+			//引数がない、または引数での接続に失敗した場合は手入力
+			ShowMyIPAddresses();
+			string portStr;
+			cout << "\n接続先サーバーIP: "; cin >> serverIP;
+			cout << "ポート番号: ";      cin >> portStr;
+			serverPort = (unsigned short)stoi(portStr);
+		}
+
+		//ソケット作成
+		sock = socket(AF_INET,SOCK_STREAM,0);
+		if(sock == INVALID_SOCKET) {
+			cout << "ソケット作成失敗" << endl;
+			WSACleanup();
+			return 1;
+		}
+
+		//接続設定
+		SOCKADDR_IN addr = {0};
+		addr.sin_family = AF_INET;
+		addr.sin_port = htons(serverPort);
+		inet_pton(AF_INET,serverIP.c_str(),&addr.sin_addr.s_addr);
+
+		//接続実行
+		if(connect(sock,(SOCKADDR*)&addr,sizeof(addr)) == SOCKET_ERROR)
+		{
+			cout << "接続失敗 IP: " << serverIP << " Port: " << serverPort << " に繋げませんでした。" << endl;
+			closesocket(sock);
+			// ループの最初（入力待ち）に戻る
+			continue;
+		}
+
+		//接続成功して初めてこのメッセージを出す
+		cout << "Connected!  サーバーからのタスクを待機します。" << endl;
+		break; //接続できたので入力ループを脱出
+	}
 
 	while(true)
 	{
