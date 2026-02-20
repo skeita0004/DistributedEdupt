@@ -7,7 +7,7 @@ namespace edupt
 {
 	struct RenderData
 	{
-		RenderData();
+		RenderData() = default;
 		RenderData(int32_t _width,     int32_t _height,
 				   int32_t _tileWidth, int32_t _tileHeight,
 				   int32_t _offsetX,   int32_t _offsetY,
