@@ -5,7 +5,7 @@
 #include <string>
 #include <queue> 
 
-#include "scene.h"
+//#include "scene.h"
 
 #pragma comment(lib, "ws2_32.lib")
 
@@ -41,99 +41,126 @@ void ShowMyIPAddresses()
 	}
 }
 
-int main()
+int main(int argc,char* argv[])
 {
+	string serverIP;
+	unsigned short serverPort;
 	WSADATA wsaData;
-	if(WSAStartup(MAKEWORD(2,2),&wsaData) != 0) return 1;
 
-	ShowMyIPAddresses();
+	//WinSock初期化
+	if(WSAStartup(MAKEWORD(2,2),&wsaData) != 0) return 1;
 
 	//届いたタスクを一時的に貯めておくキュー
 	queue<RenderTask> taskQueue;
 
+	//接続ループ
+	SOCKET sock = INVALID_SOCKET;
 	while(true)
 	{
-		string ip,portStr;
-		cout << "\n接続先サーバーIP: "; cin >> ip;
-		cout << "ポート番号: "; cin >> portStr;
+		//argv[0]がコマンド名、argv[1]がIP、argv[2]がポート番号の想定
+		//引数があるか、2回目以降の再試行かで分岐
+		if(argc == 3) {
+			//初回かつ引数がある場合
+			serverIP = argv[1];
+			serverPort = (unsigned short)atoi(argv[2]);
+			cout << "コマンドライン引数を使用します: " << serverIP << ":" << serverPort << endl;
+			//一度試行したら、失敗時に手入力へ移行するためargcをリセット
+			argc = 0;
+		} else {
+			//引数がない、または引数での接続に失敗した場合は手入力
+			ShowMyIPAddresses();
+			string portStr;
+			cout << "\n接続先サーバーIP: "; cin >> serverIP;
+			cout << "ポート番号: ";      cin >> portStr;
+			serverPort = (unsigned short)stoi(portStr);
+		}
 
-		SOCKET sock = socket(AF_INET,SOCK_STREAM,0);
+		//ソケット作成
+		sock = socket(AF_INET,SOCK_STREAM,0);
+		if(sock == INVALID_SOCKET) {
+			cout << "ソケット作成失敗" << endl;
+			WSACleanup();
+			return 1;
+		}
+
+		//接続設定
 		SOCKADDR_IN addr = {0};
 		addr.sin_family = AF_INET;
-		addr.sin_port = htons((unsigned short)stoi(portStr));
-		inet_pton(AF_INET,ip.c_str(),&addr.sin_addr.s_addr);
+		addr.sin_port = htons(serverPort);
+		inet_pton(AF_INET,serverIP.c_str(),&addr.sin_addr.s_addr);
 
+		//接続実行
 		if(connect(sock,(SOCKADDR*)&addr,sizeof(addr)) == SOCKET_ERROR)
 		{
-			cout << "接続失敗" << endl;
+			cout << "接続失敗 IP: " << serverIP << " Port: " << serverPort << " に繋げませんでした。" << endl;
 			closesocket(sock);
+			// ループの最初（入力待ち）に戻る
 			continue;
 		}
 
-		cout << "Connected! サーバーからのタスクを待機します。" << endl;
+		//接続成功して初めてこのメッセージを出す
+		cout << "Connected!  サーバーからのタスクを待機します。" << endl;
+		break; //接続できたので入力ループを脱出
+	}
+
+	while(true)
+	{
+		//string ip,portStr;
+		//cout << "\n接続先サーバーIP: "; cin >> ip;
+		//cout << "ポート番号: "; cin >> portStr;
+
+		//SOCKET sock = socket(AF_INET,SOCK_STREAM,0);
+		//SOCKADDR_IN addr = {0};
+		//addr.sin_family = AF_INET;
+		//addr.sin_port = htons((unsigned short)stoi(portStr));
+		//inet_pton(AF_INET,ip.c_str(),&addr.sin_addr.s_addr);
+
+		//if(connect(sock,(SOCKADDR*)&addr,sizeof(addr)) == SOCKET_ERROR)
+		//{
+		//	cout << "接続失敗" << endl;
+		//	closesocket(sock);
+		//	continue;
+		//}
+
+		//cout << "Connected! サーバーからのタスクを待機します。" << endl;
 
 		while(true)
 		{
-			//Load工程、ヘッダ受信
-			//まずはsizeとstateの合計8バイトを受信
-			char headBuf[8];
-			int hRet = recv(sock,headBuf,8,0);
-			if(hRet <= 0)
+			//ここから12バイトに合わせた変更
+			char taskBuf[12];
+			int recvRet = recv(sock,taskBuf,sizeof(taskBuf),0);
+
+			if(recvRet > 0) {
+				const char* _p = taskBuf; // 解析用ポインタ
+				int nID,nStartY,nEndY;
+				//ポインタをずらしながら3つ分取り出す
+				int rawTaskId,rawStartY,rawEndY;
+				memcpy(&nID,_p,4);     _p += 4;
+				memcpy(&nStartY,_p,4); _p += 4;
+				memcpy(&nEndY,_p,4);
+
+				//ネットワークオーダーからホストオーダー変換
+				RenderTask task;
+				task.taskId = ntohl(nID);
+				task.startY = ntohl(nStartY);
+				task.endY   = ntohl(nEndY);
+
+				//サーバーから送られてこない情報はクライアント側の定数で補完
+				task.width  = 800; // Server.cppのWIN_WIDTH
+				task.height = 600; // Server.cppのWIN_HEIGHT
+
+				cout << "タスク #" << task.taskId << " 受信完了。キューへ追加（現在：" << taskQueue.size() + 1 << "件）" << endl;
+
+				taskQueue.push(task);
+			} else if(recvRet == 0)
 			{
-				cout << "サーバーが接続を閉じました" << endl;
+				cout << "サーバーが接続を閉じました。" << endl;
 				break;
-			} else if(hRet < 0)
+			} else
 			{
-				cout << "ネットワークエラーが発生しました。" << endl;
-				break;
+				//何も届いていない場合はループの先頭に戻って待機
+				continue;
 			}
-
-			//ポインタを使って受信データを解析
-			const char* _recvP = headBuf;
-			int netSize,netState;
-
-			//memcopyでバイトデータを取り出し、ポインタを進める
-			memcpy(&netSize,_recvP,sizeof(int));
-			_recvP += sizeof(int);//指す先を次に進める
-
-			memcpy(&netState,_recvP,sizeof(int));//最後は進めない
-
-			//バイトオーダーをnetからhostへ変換
-			int dataSize = ntohl(netSize);
-			int state    = ntohl(netState);
-
-			//本体受信
-			//判明したdataSize分だけ、後続の構造体データを受信
-			vector<char> bodyBuf(dataSize);
-			int bRet = recv(sock,bodyBuf.data(),dataSize,0);
-			if(bRet <= 0)
-			{
-				cout << "タスクデータ受け取り中に切断されました" << endl;
-				break;
-			}
-
-			//PDFのLoad関数例に倣い、tmp変数を使用して復元
-			RenderTask tmp;
-			const char* _bodyP = bodyBuf.data();
-
-			//順番にmemcpyしてポインタをずらす
-			memcpy(&tmp.taskId,_bodyP,sizeof(int)); _bodyP += sizeof(int);
-			memcpy(&tmp.startY,_bodyP,sizeof(int)); _bodyP += sizeof(int);
-			memcpy(&tmp.endY,_bodyP,sizeof(int)); _bodyP += sizeof(int);
-			memcpy(&tmp.width,_bodyP,sizeof(int)); _bodyP += sizeof(int);
-			memcpy(&tmp.height,_bodyP,sizeof(int));//最後は進めない
-
-			//全ての項目をホスト用に変換して確定
-			RenderTask task;
-			task.taskId = ntohl(tmp.taskId);
-			task.startY = ntohl(tmp.startY);
-			task.endY   = ntohl(tmp.endY);
-			task.width  = ntohl(tmp.width);
-			task.height = ntohl(tmp.height);
-
-			//キューに突っ込む
-			taskQueue.push(task);
-			cout << "タスク #" << task.taskId << " 受信完了。キューへ追加（現在: " << taskQueue.size() << "件）" << endl;
 
 			//計算・報告フェーズ
 			//キューに溜まったタスクを順次処理
