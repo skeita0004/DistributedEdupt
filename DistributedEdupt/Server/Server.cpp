@@ -16,7 +16,7 @@ Server::Server() :
 Server::~Server()
 {}
 
-int Server::Initialize(const char** _argv)
+int Server::Initialize(char** _argv)
 {
 	GetCommandLineArgs(_argv);
 
@@ -106,9 +106,10 @@ void Server::AcceptLocalClient()
 	// ローカルクライアント用に後でループ分ける
 	std::string localClientPath{"./Client.exe"};
 
-	#ifdef _DEBUG
-	localClientPath = "D:\\GE2A22\\home\\PG\\repos\\DistributedEdupt\\DistributedEdupt\\x64\\Debug\\Client.exe";
-	#endif
+#ifdef _DEBUG
+	//localClientPath = "D:\\GE2A22\\home\\PG\\repos\\DistributedEdupt\\DistributedEdupt\\x64\\Debug\\Client.exe";
+	localClientPath = "C:/Users/saito/source/repos/DistributedEdupt/DistributedEdupt/x64/Debug/Client.exe";
+#endif
 
 	if(localClient_->Launch(localClientPath,
 		std::to_string(INADDR_LOOPBACK),
@@ -133,6 +134,8 @@ void Server::AcceptLocalClient()
 
 			ClientInfo info = {newSock,std::string(ipStr)};
 			connectedClients_.push_back(info);
+
+			// TODO:シーンデータ送信
 
 			DisplayMessage(connectedClients_); // 接続があったので表示更新
 			break;
@@ -178,12 +181,22 @@ void Server::DisplayMessage(const std::vector<ClientInfo>& clients)
 	std::cout << "Press Enter to stop accepting client connections..." << std::endl;
 }
 
-void Server::GetCommandLineArgs(const char** _argv)
+void Server::GetCommandLineArgs(char** _argv)
 {
 	imageWidth_     = atoi(_argv[1]);
 	imageHeight_    = atoi(_argv[2]);
 	superSampleNum_ = atoi(_argv[3]);
 	sampleNum_      = atoi(_argv[4]);
+}
+
+void Server::RecvData()
+{
+
+}
+
+const std::vector<Server::RenderResult>& Server::GetRenderResult()
+{
+	return renderResult_;
 }
 
 void Server::JoinClient()
@@ -199,6 +212,8 @@ void Server::JoinClient()
 
 		ClientInfo info = {newSock,std::string(ipStr)};
 		connectedClients_.push_back(info);
+
+		// TODO:シーンデータ送信
 
 		DisplayMessage(connectedClients_); // 接続があったので表示更新
 	}
@@ -234,6 +249,8 @@ void Server::PreparationSendData()
 
 void Server::SendData()
 {
+	// クライアントが0であれば終了
+	
 	// 処理データの変換・送信
 	for(int i = 0; i < renderData_.size(); i++)
 	{
@@ -245,6 +262,7 @@ void Server::SendData()
 
 		uint64_t jobDataSize{htonll(sendData.mySize)};
 		uint8_t  state{(int8_t)STATE_QUOTA};
+
 		char pRenderData[sizeof(edupt::RenderData)]{};
 		int index{0};
 

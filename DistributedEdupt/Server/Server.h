@@ -17,13 +17,22 @@ class LocalClient;
 class Server
 {
 public:
+	// 受信用
+	struct RenderResult
+	{
+		int id;
+		edupt::Color renderResult;
+	};
+
 	Server();
 	~Server();
+
+
 	
 	/// @brief サーバの初期化
 	/// @param _argv main関数が受け取ったコマンドライン引数
 	/// @return 正常終了: 0, 異常終了: -1
-	int Initialize(const char** _argv);
+	int Initialize(char** _argv);
 
 	/// @brief 解放処理
 	/// @return 正常終了: 0, 異常終了: -1
@@ -32,6 +41,8 @@ public:
 	void JoinClient();
 	void PreparationSendData();
 	void SendData();
+	void RecvData();
+	const std::vector<RenderResult>& GetRenderResult();
 
 	void SendDataStab();
 
@@ -70,13 +81,6 @@ private:
 		Tile tile;
 	};
 
-	// 受信用
-	struct RecvData
-	{
-		int id;
-		edupt::Color renderResult;
-	};
-
 	/// @brief テスト用スタブ
 	struct RenderTask
 	{
@@ -94,7 +98,8 @@ private:
 
 	void DisplayMessage(const std::vector<ClientInfo>& clients);
 
-	void GetCommandLineArgs(const char** _argv);
+	// いらないかも～ TODO:消す
+	void GetCommandLineArgs(char** _argv);
 
 
 	inline static const uint16_t PORT_{8888};
@@ -110,5 +115,7 @@ private:
 
 	std::vector<ClientInfo> connectedClients_;
 	std::vector<Tile> renderData_;
+	std::vector<RenderResult> renderResult_;
+
 	LocalClient* localClient_;
 };

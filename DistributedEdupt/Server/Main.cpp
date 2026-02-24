@@ -25,7 +25,7 @@ int main(int argc, char** argv)
 	{
 		server.JoinClient();
 		
-		if(_kbhit())
+		if(_kbhit() == TRUE)
 		{
 			if(_getch() == 13)
 			{
@@ -44,7 +44,22 @@ int main(int argc, char** argv)
 	// 受信(待機)、画像合成、形式変換(ffmpeg)
 	while(true)
 	{
+		// 1.送信したタイルの数分のタイルを受信できるまで受信処理
+		//	while (Server.GetRecvData().size() < Server.totalTileNum)
+		//	{
+		//		Server.RecvData();
+		//	}
 
+		// 2.1.が終わったら、配列を合成する
+		// CombineTiles(Server.GetRecvData());
+
+		// 3.合成した配列から、PPM画像を作成（edupt::save_ppm_file）
+		// edupt::save_ppm_file("output.ppm", image, tileWidth * tileNumX, tileHeight * tileNumY);
+
+		// 4.生成したPPM画像は引数で渡した解像度よりも少し大きいので、
+		//   0, 0 から、引数で受け取った解像度のサイズへとクロップ(ffmpeg)
+  
+		// 5.PPMは扱いにくいので、pngに変換(ffmpeg)
 	}
 
 	server.Release();

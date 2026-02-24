@@ -12,7 +12,7 @@
 
 namespace edupt
 {
-	int render(RenderData _renderData)
+	int render(RenderData _renderData, Color* _image)
 	{
 		// カメラ位置(共通)
 		const Vec camera_position = Vec(50.0, 52.0, 220.0);
@@ -32,7 +32,7 @@ namespace edupt
 		const Vec screen_center = camera_position + camera_dir * screen_dist;
 
 		// レンダリング結果格納配列(非共通)
-		Color* image = new Color[_renderData.tileWidth * _renderData.tileHeight];
+		_image = new Color[_renderData.tileWidth * _renderData.tileHeight];
 
 		// TODO: OpenMPの追加
 
@@ -82,10 +82,7 @@ namespace edupt
 
 						// ここで、値を一時的な配列に格納する
 						// もちろんタイル単位
-						image[image_index] = accumulated_radiance;
-
-						// return data
-						
+						_image[image_index] = accumulated_radiance;
 					}
 				}
 			}
