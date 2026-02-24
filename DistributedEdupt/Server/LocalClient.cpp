@@ -10,7 +10,7 @@ bool LocalClient::Launch(const std::string& _exePath,
 						 const std::string& _ip,
 						 const std::string& _port)
 {
-	std::string cmdLine{_exePath/* + " " + _ip + " " + _port*/};
+	std::string cmdLine{_exePath + " " + _ip + " " + _port};
 
 	STARTUPINFOA startUpInfo{};
 	startUpInfo.cb = sizeof(startUpInfo);

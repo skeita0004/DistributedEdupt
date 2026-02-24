@@ -9,6 +9,9 @@
 #include "intersection.h"
 #include "random.h"
 
+#undef max
+#undef min
+
 namespace edupt
 {
 

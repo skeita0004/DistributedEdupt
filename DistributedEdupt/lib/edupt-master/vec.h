@@ -1,7 +1,8 @@
-#ifndef	_VEC_H_
+﻿#ifndef	_VEC_H_
 #define	_VEC_H_
 
 #include <cmath>
+#include <WinSock2.h>
 
 namespace edupt
 {
@@ -11,6 +12,17 @@ namespace edupt
 		double x, y, z;
 		Vec(const double x = 0, const double y = 0, const double z = 0) : x(x), y(y), z(z)
 		{
+		}
+
+		Vec ChangeEndianHtoN() const
+		{
+			Vec tmp{};
+
+			tmp.x = htond(x);
+			tmp.y = htond(y);
+			tmp.z = htond(z);
+
+			return tmp;
 		}
 
 		inline Vec operator+(const Vec& b) const

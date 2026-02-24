@@ -40,8 +40,11 @@ namespace edupt
 		int tileBottomY = _renderData.offsetY + _renderData.tileHeight;
 		int tileRightX  = _renderData.offsetX + _renderData.tileWidth;
 
+		#pragma omp parallel for schedule(dynamic, 1) num_threads(12)
 		for (int y = _renderData.offsetY; y < tileBottomY; y++)
 		{
+			std::cerr << "Rendering (y = " << y << ") " << (100.0 * y / (tileBottomY - 1)) << "%" << std::endl;
+
 			for (int x = _renderData.offsetX; x < tileRightX; x++)
 			{
 				int localY = y - _renderData.offsetY;
@@ -49,7 +52,7 @@ namespace edupt
 
 				// 左下原点にする
 				const int image_index = (_renderData.tileHeight - localY - 1) * _renderData.tileWidth + localX;
-				
+
 				uint32_t seed = y * _renderData.width + x;
 				Random rnd(seed + 1);
 
@@ -60,7 +63,7 @@ namespace edupt
 					for (int sx = 0; sx < _renderData.superSample; sx++)
 					{
 						Color accumulated_radiance = Color();
-						
+
 						// 一つのサブピクセルあたり_renderData.sample回サンプリングする
 						// ここもタイルごとに同じ
 						for (int s = 0; s < _renderData.sample; s++)

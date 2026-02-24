@@ -6,17 +6,19 @@
 #include <json.hpp>
 
 SceneLoader::SceneLoader()
-{}
+{
+}
 
 SceneLoader::~SceneLoader()
-{}
+{
+}
 
 bool SceneLoader::Load(const std::string& _fileName)
 {
 	using json = nlohmann::json;
-	
+
 	std::ifstream sceneFile(_fileName);
-	if(sceneFile.good())
+	if (sceneFile.good())
 	{
 		// ファイルサイズの取得
 		sceneFile.seekg(0, std::ios_base::end);
@@ -25,13 +27,13 @@ bool SceneLoader::Load(const std::string& _fileName)
 
 		std::string fileData{};
 
-		while(std::getline(sceneFile, fileData))
+		while (std::getline(sceneFile, fileData))
 		{
 		}
-		
+
 		// charの配列にコピー
 		std::copy(fileData.begin(), fileData.end(), sceneData_.begin());
 	}
 
-    return false;
+	return false;
 }

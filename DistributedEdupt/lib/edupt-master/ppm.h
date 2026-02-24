@@ -1,5 +1,6 @@
-#ifndef _PPM_H_
+﻿#ifndef _PPM_H_
 #define _PPM_H_
+
 
 #include <string>
 #include <cstdlib>

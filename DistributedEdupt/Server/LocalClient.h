@@ -9,7 +9,7 @@ public:
 
 	/// @brief ローカルクライアントの起動
 	/// @return 成功:true, 失敗:false
-	bool Launch(const std::string& _exePath, 
+	bool Launch(const std::string& _exePath,
 				const std::string& _ip,
 				const std::string& _port);
 

@@ -5,7 +5,7 @@
 int main(int argc, char** argv)
 {
 	// 引数チェック(解像度、スーパーサンプル数、サンプル数)
-	if(argc != 5)
+	if (argc != 5)
 	{
 		std::cerr << "Invalid argment." << std::endl;
 		std::cerr << "Example: ./DEduptSV.exe width height supersample sample" << std::endl;
@@ -13,7 +13,7 @@ int main(int argc, char** argv)
 	}
 
 	Server server{};
-	if(server.Initialize(argv) != 0)
+	if (server.Initialize(argv) != 0)
 	{
 		std::cerr << "Initialize failed." << std::endl;
 		return -1;
@@ -21,13 +21,13 @@ int main(int argc, char** argv)
 
 	// --- クライアント接続受付フェーズ ---
 	std::cout << "Waiting Client..." << std::endl;
-	while(true)
+	while (true)
 	{
 		server.JoinClient();
-		
-		if(_kbhit() == TRUE)
+
+		if (_kbhit() == TRUE)
 		{
-			if(_getch() == 13)
+			if (_getch() == 13)
 			{
 				break;
 			}
@@ -41,26 +41,31 @@ int main(int argc, char** argv)
 	server.PreparationSendData();
 	server.SendData();
 
+	std::cout << "全てのレンダリングデータの送信が完了しました" << std::endl;
+
 	// 受信(待機)、画像合成、形式変換(ffmpeg)
-	while(true)
+	int counter{0};
+	while (true)
 	{
-		// 1.送信したタイルの数分のタイルを受信できるまで受信処理
-		//	while (Server.GetRecvData().size() < Server.totalTileNum)
-		//	{
-		//		Server.RecvData();
-		//	}
+		// 1.送信したタイルの数分、タイルを受信できるまで受信処理
+		server.RecvData();
 
-		// 2.1.が終わったら、配列を合成する
-		// CombineTiles(Server.GetRecvData());
-
-		// 3.合成した配列から、PPM画像を作成（edupt::save_ppm_file）
-		// edupt::save_ppm_file("output.ppm", image, tileWidth * tileNumX, tileHeight * tileNumY);
-
-		// 4.生成したPPM画像は引数で渡した解像度よりも少し大きいので、
-		//   0, 0 から、引数で受け取った解像度のサイズへとクロップ(ffmpeg)
-  
-		// 5.PPMは扱いにくいので、pngに変換(ffmpeg)
+		if (server.GetRecvDataNum() >= server.GetTotalTileNum())
+		{
+			break;
+		}
 	}
+
+	// 2.1.が終わったら、配列を合成する
+	// CombineTiles(Server.GetRecvData());
+
+	// 3.合成した配列から、PPM画像を作成（edupt::save_ppm_file）
+	// edupt::save_ppm_file("output.ppm", image, tileWidth * tileNumX, tileHeight * tileNumY);
+
+	// 4.生成したPPM画像は引数で渡した解像度よりも少し大きいので、
+	//   0, 0 から、引数で受け取った解像度のサイズへとクロップ(ffmpeg)
+
+	// 5.PPMは扱いにくいので、pngに変換(ffmpeg)
 
 	server.Release();
 
