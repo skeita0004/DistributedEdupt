@@ -15,11 +15,7 @@ bool LocalClient::Launch(const std::string& _exePath,
 	STARTUPINFOA startUpInfo{};
 	startUpInfo.cb = sizeof(startUpInfo);
 
-	DWORD creationFlags{0};
-
-#ifdef _DEBUG
-	creationFlags = CREATE_NEW_CONSOLE;
-#endif
+	DWORD creationFlags{CREATE_NEW_CONSOLE};
 
 	BOOL result{};
 	result = CreateProcessA(nullptr,

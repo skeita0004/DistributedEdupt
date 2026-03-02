@@ -129,6 +129,9 @@
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
     </Link>
+    <PostBuildEvent>
+      <Command>xcopy "$(SolutionDir)$(Platform)\$(Configuration)\Server.exe" "$(SolutionDir)\DistributedEduptSV\" /Y</Command>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="LocalClient.cpp" />

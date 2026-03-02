@@ -131,6 +131,10 @@
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
     </Link>
+    <PostBuildEvent>
+      <Command>xcopy "$(SolutionDir)$(Platform)\$(Configuration)\Client.exe" "$(SolutionDir)\DistributedEduptCL\" /Y
+xcopy "$(SolutionDir)$(Platform)\$(Configuration)\Client.exe" "$(SolutionDir)\DistributedEduptSV\resource\" /Y</Command>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="Client_Main.cpp" />

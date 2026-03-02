@@ -1,5 +1,8 @@
-﻿#include "Server.h"
+﻿#define _CRT_SECURE_NO_WARNINGS
 
+#include "Server.h"
+
+#include "ppm.h"
 
 Server::Server() :
 	imageWidth_(0),
@@ -112,8 +115,8 @@ void Server::AcceptLocalClient()
 	std::string ipAddress{"127.0.0.1"};
 
 #ifdef _DEBUG
-	//localClientPath = "D:\\GE2A22\\home\\PG\\repos\\DistributedEdupt\\DistributedEdupt\\x64\\Debug\\Client.exe";
-	localClientPath = "C:/Users/saito/source/repos/DistributedEdupt/DistributedEdupt/x64/Debug/Client.exe";
+	localClientPath = "D:\\GE2A22\\home\\PG\\repos\\DistributedEdupt\\DistributedEdupt\\x64\\Debug\\Client.exe";
+	//localClientPath = "C:/Users/saito/source/repos/DistributedEdupt/DistributedEdupt/x64/Debug/Client.exe";
 #endif
 
 	if (localClient_->Launch(localClientPath,
@@ -316,6 +319,8 @@ void Server::RecvData()
 			std::cout << "レンダリング済みデータ(id: " << tmp.id << ")を受信しました" << std::endl;
 			renderResult_.push_back(tmp);
 
+			edupt::save_ppm_file("out" + std::to_string(tmp.id) + ".ppm", tmp.renderResult.data(), 64, 64);
+
 			//client->headBuf.clear();
 			//client->bodyBuf.clear();
 			client->bodySize = 0;
@@ -371,13 +376,13 @@ void Server::PreparationSendData()
 	int loopNum = tileNumWidth * tileNumHeight;
 	totalTileNum_ = loopNum;
 
-	std::string ffmpegPath{"./resource/ffmpeg.exe"};
+	std::string ffmpegPath{".\\resource\\ffmpeg.exe"};
 
 #ifdef _DEBUG
 	ffmpegPath = "ffmpeg";
 #endif
 
-	ffmpegArgs_ = ffmpegPath + "-y -i ./out%d.ppm -vf \"tile=";
+	ffmpegArgs_ = ffmpegPath + " -y -i ./out%d.ppm -vf \"tile=";
 	ffmpegArgs_ += std::to_string(tileNumWidth) + "x" + std::to_string(tileNumHeight);
 	ffmpegArgs_ += ",hflip,vflip,crop=" + std::to_string(imageWidth_) + ":" + std::to_string(imageHeight_);
 	ffmpegArgs_ += ":0:0\" ./render_result.png";

@@ -3,7 +3,6 @@
 
 #include "Server.h"
 #include <conio.h>
-#include "ppm.h"
 
 int main(int argc, char** argv)
 {
@@ -61,12 +60,12 @@ int main(int argc, char** argv)
 
 	}
 
-	int i = 0;
-	for (auto& tile : server.GetRenderResult())
-	{
-		edupt::save_ppm_file("out" + std::to_string(i) + ".ppm", tile.renderResult.data(), 64, 64);
-		i++;
-	}
+	//int i = 0;
+	//for (auto& tile : server.GetRenderResult())
+	//{
+	//	edupt::save_ppm_file("out" + std::to_string(i) + ".ppm", tile.renderResult.data(), 64, 64);
+	//	i++;
+	//}
 
 	// 2.1.が終わったら、画像を合成し、リサイズ、形式変換
 	system(server.GetffmpegArgs().c_str());
