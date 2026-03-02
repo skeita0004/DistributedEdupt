@@ -43,7 +43,7 @@ namespace edupt
 		#pragma omp parallel for schedule(dynamic, 1) num_threads(12)
 		for (int y = _renderData.offsetY; y < tileBottomY; y++)
 		{
-			std::cerr << "Rendering (y = " << y << ") " << (100.0 * y / (tileBottomY - 1)) << "%" << std::endl;
+			std::cerr << "Rendering (y = " << y << ") " << (100.0 * (y - _renderData.offsetY) / (_renderData.tileHeight - 1)) << "%" << std::endl;
 
 			for (int x = _renderData.offsetX; x < tileRightX; x++)
 			{
