@@ -2,6 +2,7 @@
 
 #include <vector>
 #include <string>
+#include <sstream>
 
 bool LoadTiles(int _tileNumX, int _tileNumY, std::vector<int>& _handles);
 void ReLoadTiles(int _tileNumX, int _tileNumY, std::vector<int>& _handles);
@@ -11,12 +12,15 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
 					 _In_ LPSTR lpCmdLine,
 					 _In_ int nCmdShow)
 {
-	SetGraphMode(1920, 1080, 32);
+	const int SCREEN_WIDTH{1366};
+	const int SCREEN_HEIGHT{768};
+
+	ChangeWindowMode(TRUE);
+	SetGraphMode(SCREEN_WIDTH, SCREEN_HEIGHT, 32);
 	SetOutApplicationLogValidFlag(TRUE);
 
 	SetMainWindowText("RenderResultViewer");
 	//SetWindowSizeExtendRate(1.0f);
-	ChangeWindowMode(TRUE);
 
 	if (DxLib_Init() == -1)
 	{
@@ -32,6 +36,24 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
 	int tileNumX{4}; // 横方向タイル数
 	int tileNumY{4}; // 縦方向タイル数
 
+	int argc{};
+
+	std::vector<std::string> cmdLineArgs{};
+	std::string cmdLineRawArgs{GetCommandLineA()};
+	std::istringstream iss(cmdLineRawArgs);
+
+	std::string arg{};
+	while (iss >> arg)
+	{
+		cmdLineArgs.push_back(arg);
+	}
+
+	imageWidth  = std::stoi(cmdLineArgs[1]);
+	imageHeight = std::stoi(cmdLineArgs[2]);
+	tileNumX    = std::stoi(cmdLineArgs[3]);
+	tileNumY    = std::stoi(cmdLineArgs[4]);
+	tileSize    = std::stoi(cmdLineArgs[5]);
+
 	std::vector<int> handles{};
 
 	// 画像を読み込めるまで
@@ -44,11 +66,13 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
 	}
 
 	int tileMerged{MakeScreen(tileSize * tileNumX, tileSize * tileNumY)};
+	int rotateAndCropped{MakeScreen(imageWidth, imageHeight)};
 
 	while (true)
 	{
-		SetDrawScreen(tileMerged);
 		ClearDrawScreen();
+
+		SetDrawScreen(tileMerged);
 
 		for (int y = 0; y < tileNumY; y++)
 		{
@@ -58,8 +82,7 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
 			}
 		}
 
-		SetDrawScreen(DX_SCREEN_BACK);
-		ClearDrawScreen();
+		SetDrawScreen(rotateAndCropped);
 
 		int drawOriginX{imageWidth / 2};
 		int drawOriginY{imageHeight / 2};
@@ -67,6 +90,9 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
 		int srcX{(tileNumX * tileSize) - imageWidth};
 		int srcY{(tileNumY * tileSize) - imageHeight};
 		DrawRectRotaGraph(drawOriginX, drawOriginY, srcX, srcY, imageWidth, imageHeight, 1.0, 0.0, tileMerged, FALSE, TRUE, TRUE);
+
+		SetDrawScreen(DX_SCREEN_BACK);
+		DrawExtendGraph(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT, rotateAndCropped, FALSE);
 
 		ReLoadTiles(tileNumX, tileNumY, handles);
 		ScreenFlip();

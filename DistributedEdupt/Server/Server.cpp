@@ -2,6 +2,7 @@
 
 #include "Server.h"
 #include "LocalClient.h"
+#include "Viewer.h"
 
 #include "ppm.h"
 
@@ -15,7 +16,8 @@ Server::Server() :
 	serverAddr_(),
 	connectedClients_(),
 	renderData_(),
-	localClient_(nullptr)
+	localClient_(nullptr),
+	viewer_(nullptr)
 {
 }
 
@@ -32,6 +34,12 @@ Server::~Server()
 	{
 		localClient_->Terminate();
 		delete localClient_;
+	}
+
+	if (viewer_)
+	{
+		viewer_->Terminate();
+		delete viewer_;
 	}
 }
 
@@ -88,8 +96,11 @@ int Server::Initialize(char** _argv)
 	}
 
 	ShowServerIP();
+	
 	localClient_ = new LocalClient();
 	AcceptLocalClient();
+
+	viewer_ = new Viewer();
 
 	return 0;
 }
@@ -131,10 +142,10 @@ void Server::JoinClient()
 void Server::PreparationSendData()
 {
 	// 処理データの用意
-	int tileNumWidth  = (int)std::ceil(imageWidth_  / (float)TILE_SIZE_);
-	int tileNumHeight = (int)std::ceil(imageHeight_ / (float)TILE_SIZE_);
+	tileNumX_ = (int)std::ceil(imageWidth_  / (float)TILE_SIZE_);
+	tileNumY_ = (int)std::ceil(imageHeight_ / (float)TILE_SIZE_);
 
-	int loopNum = tileNumWidth * tileNumHeight;
+	int loopNum = tileNumX_ * tileNumY_;
 	totalTileNum_ = loopNum;
 
 	ffmpegPath_ = ".\\resource\\ffmpeg.exe";
@@ -144,7 +155,7 @@ void Server::PreparationSendData()
 #endif
 
 	ffmpegArgs_ = ffmpegPath_ + " -y -i ./out%d.ppm -vf \"tile=";
-	ffmpegArgs_ += std::to_string(tileNumWidth) + "x" + std::to_string(tileNumHeight);
+	ffmpegArgs_ += std::to_string(tileNumX_) + "x" + std::to_string(tileNumY_);
 	ffmpegArgs_ += ",hflip,vflip,crop=" + std::to_string(imageWidth_) + ":" + std::to_string(imageHeight_);
 	ffmpegArgs_ += ":0:0\" ./render_result.png";
 
@@ -165,8 +176,8 @@ void Server::PreparationSendData()
 		tmp.tileWidth   = TILE_SIZE_;
 		tmp.tileHeight  = TILE_SIZE_;
 
-		tmp.offsetX     = TILE_SIZE_ * (i % tileNumWidth);
-		tmp.offsetY     = TILE_SIZE_ * (i / tileNumWidth);
+		tmp.offsetX     = TILE_SIZE_ * (i % tileNumX_);
+		tmp.offsetY     = TILE_SIZE_ * (i / tileNumX_);
 
 		tmp.sample      = sampleNum_;
 		tmp.superSample = superSampleNum_;
@@ -175,6 +186,8 @@ void Server::PreparationSendData()
 
 		renderData_.push_back(tile);
 	}
+
+	LaunchViewer();
 }
 
 void Server::SendData()
@@ -499,6 +512,30 @@ void Server::AcceptLocalClient()
 		}
 		Sleep(10);
 	}
+}
+
+void Server::LaunchViewer()
+{
+	std::cout << "ビューワ起動" << std::endl;
+
+	std::string viewerPath{VIEWER_EXEPATH_};
+
+	#ifdef _DEBUG
+	//localClientPath = "D:\\GE2A22\\home\\PG\\repos\\DistributedEdupt\\DistributedEdupt\\x64\\Debug\\Client.exe";
+	//localClientPath = "C:/Users/saito/source/repos/DistributedEdupt/DistributedEdupt/x64/Debug/Client.exe";
+	#endif
+
+	if (viewer_->Launch(viewerPath,
+						std::to_string(imageWidth_),
+						std::to_string(imageHeight_),
+						std::to_string(tileNumX_),
+						std::to_string(tileNumY_),
+						std::to_string(TILE_SIZE_)) == FALSE)
+	{
+		std::cerr << "ビューワの起動に失敗" << std::endl;
+		return;
+	}
+	std::cout << "ビューワの起動完了、サーバに戻って操作を進めてください。" << std::endl;
 }
 
 void Server::DisplayMessage(const std::vector<ClientInfo>& clients)

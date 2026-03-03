@@ -16,6 +16,7 @@
 #pragma comment(lib, "ws2_32.lib")
 
 class LocalClient;
+class Viewer;
 
 class Server
 {
@@ -85,6 +86,7 @@ private:
 	};
 
 	void AcceptLocalClient();
+	void LaunchViewer();
 
 	// サーバー自身のIPアドレスを取得する関数
 	void ShowServerIP();
@@ -94,14 +96,16 @@ private:
 	inline static const uint16_t PORT_{8888};
 	inline static const std::string LOCAL_CLIENT_IP_{"127.0.0.1"};
 	inline static const std::string LOCAL_CLIENT_EXEPATH_{"./resource/Client.exe"};
-	std::string ffmpegPath_;
 	inline static const int TILE_SIZE_{64};
+	inline static const std::string VIEWER_EXEPATH_{"./resource/Viewer.exe"};
 
 	int imageWidth_;
 	int imageHeight_;
 	int superSampleNum_;
 	int sampleNum_;
 
+	int tileNumX_;
+	int tileNumY_;
 	int totalTileNum_;
 
 	SOCKET listenSock_;
@@ -111,7 +115,9 @@ private:
 	std::vector<Tile> renderData_;
 	std::vector<RenderResult> renderResult_;
 
+	std::string ffmpegPath_;
 	std::string ffmpegArgs_;
 
 	LocalClient* localClient_;
+	Viewer*      viewer_;
 };

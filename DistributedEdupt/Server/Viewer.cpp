@@ -14,12 +14,17 @@ bool Viewer::Launch(const std::string& _exePath,
 					const std::string& _tileNumY,
 					const std::string& _tileSize)
 {
-	std::string cmdLine{_exePath + " " + _imageWidth + " " + _imageHeight + " " + _tileNumX + " " + _tileNumY + " " + _tileSize};
+	std::string cmdLine{_exePath + " "
+						+ _imageWidth + " "
+						+ _imageHeight + " "
+						+ _tileNumX + " "
+						+ _tileNumY + " "
+						+ _tileSize};
 
 	STARTUPINFOA startUpInfo{};
 	startUpInfo.cb = sizeof(startUpInfo);
 
-	DWORD creationFlags{CREATE_NEW_CONSOLE};
+	DWORD creationFlags{0};
 
 	BOOL result{};
 	result = CreateProcessA(nullptr,
