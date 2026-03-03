@@ -1,6 +1,11 @@
 ﻿#include "Client.h"
 
-Client::Client()
+Client::Client() :
+	sock_(INVALID_SOCKET),
+	taskQueue_(),
+	serverIP_(),
+	serverPort_(),
+	firstTry_(true)
 {
 }
 
@@ -10,130 +15,203 @@ Client::~Client()
 
 int Client::Initialize()
 {
-	//WinSock初期化
-	if (WSAStartup(MAKEWORD(2, 2), &wsaData_) != 0)
-	{
-		return 1;
-	}
-
 	//ソケット作成
 	sock_ = socket(AF_INET, SOCK_STREAM, 0);
 	if (sock_ == INVALID_SOCKET)
 	{
-		std::cout << "ソケット作成失敗" << std::endl;
-		WSACleanup();
+		int errorCode{WSAGetLastError()};
+		std::cerr << "socket() failed." << std::endl;
+		std::cerr << "Error code : " << errorCode << std::endl;
 		return 1;
 	}
 }
 
-int Client::Release()
+bool Client::Run(const int _argc, const char** _argv)
 {
+	ConnectServer(_argc, _argv);
+	
+	RecvData();
+	SendData();
+
+	Release();
 }
 
-bool Client::ConnectServer(int _argc, char** _argv)
+int Client::Release()
 {
-	//argv[0]がコマンド名、argv[1]がIP、argv[2]がポート番号の想定
-	//引数があるか、2回目以降の再試行かで分岐
-	if (_argc == 3)
+	shutdown(sock_, SD_BOTH);
+	closesocket(sock_);
+	std::cout << "-------------------------------------------" << std::endl;
+	std::cout << "割り当てられた全ての計算が完了したため、サーバーとの通信を終了しました。" << std::endl;
+	std::cout << "別のサーバーに接続するか、再試行する場合はIPを入力してください。" << std::endl;
+}
+
+bool Client::ConnectServer(const int _argc, const char** _argv)
+{
+	while (true)
 	{
-		//初回かつ引数がある場合
-		serverIP_ = _argv[1];
-		serverPort_ = (uint16_t)atoi(_argv[2]);
-		std::cout << "コマンドライン引数を使用します: " << serverIP_ << ":" << serverPort_ << std::endl;
+		//argv[0]がコマンド名、argv[1]がIP、argv[2]がポート番号
+		//引数があるか、2回目以降の再試行かで分岐
+		if (_argc == 3 && firstTry_)
+		{
+			//初回かつ引数がある場合
+			serverIP_ = _argv[1];
+			serverPort_ = (uint16_t)atoi(_argv[2]);
+			std::cout << "コマンドライン引数を使用します: " << serverIP_ << ":" << serverPort_ << std::endl;
+
+			firstTry_ = false;
+		}
+		else
+		{
+			//引数がない、または引数での接続に失敗した場合は手入力
+			ShowMyIPAddresses();
+			std::cout << "\n接続先サーバーIP: ";
+			std::cin >> serverIP_;
+
+			std::string portStr{};
+			std::cout << "ポート番号: ";
+			std::cin >> portStr;
+
+			serverPort_ = (uint16_t)stoi(portStr);
+		}
+
+		//接続設定
+		SOCKADDR_IN addr = {0};
+		addr.sin_family = AF_INET;
+		addr.sin_port = htons(serverPort_);
+		inet_pton(AF_INET, serverIP_.c_str(), &addr.sin_addr.s_addr);
+
+		//接続実行
+		if (connect(sock_, (SOCKADDR*)&addr, sizeof(addr)) == SOCKET_ERROR)
+		{
+			std::cout << "接続失敗 IP: " << serverIP_ << " Port: " << serverPort_ << " へ接続できませんでした。" << std::endl;
+			std::cout << "コマンドライン引数、もしくは、接続先IPアドレス・ポート番号が誤っている可能性があります。" << std::endl;
+
+			continue;
+		}
+
+		std::cout << "Connected!  サーバーからのタスクを待機します。" << std::endl;
+		break;
 	}
-	else
-	{
-		//引数がない、または引数での接続に失敗した場合は手入力
-		ShowMyIPAddresses();
-		std::cout << "\n接続先サーバーIP: ";
-		std::cin >> serverIP_;
-
-		std::string portStr{};
-		std::cout << "ポート番号: ";
-		std::cin >> portStr;
-
-		serverPort_ = (uint16_t)stoi(portStr);
-	}
-
-	//接続設定
-	SOCKADDR_IN addr = {0};
-	addr.sin_family = AF_INET;
-	addr.sin_port = htons(serverPort_);
-	inet_pton(AF_INET, serverIP_.c_str(), &addr.sin_addr.s_addr);
-
-	//接続実行
-	if (connect(sock_, (SOCKADDR*)&addr, sizeof(addr)) == SOCKET_ERROR)
-	{
-		std::cout << "接続失敗 IP: " << serverIP_ << " Port: " << serverPort_ << " に繋げませんでした。" << std::endl;
-		std::cout << "コマンドライン引数、もしくは、接続先IPアドレス・ポート番号が誤っている可能性があります。" << std::endl;
-		closesocket(sock_);
-
-		// ループの最初（入力待ち）に戻る
-		return false;
-	}
-
-	//接続成功して初めてこのメッセージを出す
-	std::cout << "Connected!  サーバーからのタスクを待機します。" << std::endl;
-	//接続できたので入力ループを脱出
 
 	return true;
 }
 
-void Client::RecvData()
+int Client::RecvData()
 {
-	// 受信データのサイズを取得する
-// 受信バッファのサイズを取得したサイズでリサイズする
-
-// 受信データ格納用
-	char recvRawData[sizeof(JobData)];
-
-	int recvRet = recv(sock_, recvRawData, sizeof(JobData), 0);
-	if (recvRet > 0)
+	while (true)
 	{
-		// 解析用ポインタ
-		const char* _p = recvRawData;
 
-		JobData tmp{};
-		int index{0};
+		// 受信データのサイズを取得する
+		// 受信バッファのサイズを取得したサイズでリサイズする
 
-		//ポインタをずらしながら3つ分取り出す
-		memcpy(&tmp.mySize, &_p[index], sizeof(tmp.mySize));
-		index += sizeof(tmp.mySize);
+		// 受信データ格納用
+		char recvRawData[sizeof(JobData)];
 
-		memcpy(&tmp.status, &_p[index], sizeof(tmp.status));
-		index += sizeof(tmp.status);
-
-		memcpy(&tmp.tile, &_p[index], sizeof(tmp.tile));
-
-		//ネットワークオーダーからホストオーダー変換
-		tmp.mySize = ntohl(tmp.mySize);
-		tmp.tile.ChangeEndianNtoH();
-
-		cout << "タスク #" << tmp.tile.id << " 受信完了。キューへ追加（現在：" << taskQueue.size() + 1 << "件）" << endl;
-
-		if (tmp.status == STATE_COMPLETE_SEND)
+		int recvRet = recv(sock_, recvRawData, sizeof(JobData), 0);
+		if (recvRet > 0)
 		{
+			// 解析用ポインタ
+			const char* _p = recvRawData;
+
+			JobData tmp{};
+			int index{0};
+
+			//ポインタをずらしながら3つ分取り出す
+			memcpy(&tmp.mySize, &_p[index], sizeof(tmp.mySize));
+			index += sizeof(tmp.mySize);
+
+			memcpy(&tmp.status, &_p[index], sizeof(tmp.status));
+			index += sizeof(tmp.status);
+
+			memcpy(&tmp.tile, &_p[index], sizeof(tmp.tile));
+
+			//ネットワークオーダーからホストオーダー変換
+			tmp.mySize = ntohl(tmp.mySize);
+			tmp.tile.ChangeEndianNtoH();
+
+			std::cout << "タイル #" << tmp.tile.id << " 受信完了。キューへ追加（現在：" << taskQueue_.size() + 1 << "件）" << std::endl;
+
+			if (tmp.status == STATE_COMPLETE_SEND)
+			{
+				return;
+			}
+
+			taskQueue_.push(tmp);
+		}
+		else if (recvRet == 0)
+		{
+			std::cout << "サーバーが接続を閉じました。" << std::endl;
 			break;
 		}
-
-		taskQueue.push(tmp);
 	}
-	else if (recvRet == 0)
-	{
-		cout << "サーバーが接続を閉じました。" << endl;
-		break;
-	}
-	else
-	{
-		//何も届いていない場合はループの先頭に戻って待機
-		continue;
-	}
-
 }
 
-void Client::SendData()
+int Client::SendData()
 {
+	while (true)
+	{
+		if (taskQueue_.empty())
+		{
+			return;
+		}
 
+		JobData current = taskQueue_.front();
+		taskQueue_.pop();
+
+		const int IMAGE_ARRAY_SIZE{current.tile.renderData.tileWidth * current.tile.renderData.tileHeight};
+
+		// レンダリング処理
+		std::cout << "タイル #" << current.tile.id << " を処理中..." << std::endl;
+		std::vector<edupt::Color> image{};
+		image.resize(IMAGE_ARRAY_SIZE);
+		edupt::render(current.tile.renderData, image);
+		std::cout << "タイル #" << current.tile.id << " の処理が完了" << std::endl;
+
+		//Store工程、送信データの作成
+		const size_t SEND_BUF_SIZE{sizeof(edupt::Color) * IMAGE_ARRAY_SIZE + sizeof(uint32_t) + sizeof(uint32_t)};
+
+		std::vector<char> sendBuf{};
+		sendBuf.resize(SEND_BUF_SIZE);
+
+		// エンディアン変換
+		uint32_t sendBufSize{htonl(static_cast<uint32_t>(SEND_BUF_SIZE - sizeof(uint32_t)))};
+
+		uint32_t id = htonl(current.tile.id);
+
+		std::vector<edupt::NetVec> image_int{};
+		image_int.reserve(IMAGE_ARRAY_SIZE);
+		image_int.resize(IMAGE_ARRAY_SIZE);
+
+		if (not(image.empty()))
+		{
+			for (int i = 0; i < IMAGE_ARRAY_SIZE; i++)
+			{
+				image_int[i] = image[i].ChangeEndianHtoN();
+			}
+		}
+
+		////memcpyで詰め込み、ポインタをずらす
+		//memcpy(_sendP, &sSize, sizeof(int));  _sendP += sizeof(int);
+		//memcpy(_sendP, &sState, sizeof(int)); _sendP += sizeof(int);
+		int offset{0};
+		memcpy(sendBuf.data(), &sendBufSize, sizeof(sendBufSize));
+		offset += sizeof(sendBufSize);
+		memcpy(sendBuf.data() + offset, &id, sizeof(id));
+		offset += sizeof(id);
+		memcpy(sendBuf.data() + offset, image_int.data(),
+			   sizeof(edupt::NetVec) * image_int.size());
+
+		//最後に計算データ本体をコピー
+		//memcpy(_sendP, lineData.data(), pixelDataSize);
+
+		//送信実行
+		int ret = send(sock_, sendBuf.data(), sendBuf.size(), 0);
+		std::cout << "タスク #" << current.tile.id << " の計算結果を送信しました。" << std::endl;
+
+		#ifdef _DEBUG
+		std::cout << "サイズ：" << ret << std::endl;
+		#endif
+	}
 }
 
 void Client::ShowMyIPAddresses()

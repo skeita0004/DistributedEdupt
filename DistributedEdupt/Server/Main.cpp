@@ -9,8 +9,18 @@ int main(int argc, char** argv)
 	// 引数チェック(解像度、スーパーサンプル数、サンプル数)
 	if (argc != 5)
 	{
-		std::cerr << "Invalid argment." << std::endl;
-		std::cerr << "Example: ./DEduptSV.exe width height supersample sample" << std::endl;
+		std::cerr << "不正な引数です。" << std::endl;
+		std::cerr << "使用例: ./DEduptSV.exe width height supersample sample" << std::endl;
+		return -1;
+	}
+
+	WSADATA wsaData;
+	// WinSock2.2 初期化
+	if (WSAStartup(MAKEWORD(2, 2), &wsaData) != 0)
+	{
+		int errorCode{WSAGetLastError()};
+		std::cerr << "WSAStartup() failed." << std::endl;
+		std::cerr << "Error code : " << errorCode << std::endl;
 		return -1;
 	}
 
@@ -70,7 +80,7 @@ int main(int argc, char** argv)
 	// 2.1.が終わったら、画像を合成し、リサイズ、形式変換
 	system(server.GetffmpegArgs().c_str());
 
-	server.Release();
+	WSACleanup();
 
 	std::cout << "Press any key to exit." << std::endl;
 	_getch();

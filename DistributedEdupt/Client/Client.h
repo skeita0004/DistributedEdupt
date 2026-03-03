@@ -5,7 +5,6 @@
 #include <string>
 #include <queue> 
 
-#include <WinSock2.h>
 #include <ws2tcpip.h>
 
 #include "render.h"
@@ -79,22 +78,29 @@ public:
 	~Client();
 
 	int Initialize();
+	bool Run(const int _argc, const char** _argv);
 	int Release();
 
-	bool ConnectServer(int _argc, char** _argv);
+	bool ConnectServer(const int _argc, const char** _argv);
 
-	void RecvData();
-	void SendData();
+	int RecvData();
+	int SendData();
 
 private:
 	void ShowMyIPAddresses();
 
-	WSADATA wsaData_;
+	/// @brief クライアントのソケット
 	SOCKET  sock_;
 
-	//届いたタスクを一時的に貯めておくキュー
+	/// @brief 届いたタスクを貯めておくキュー
 	std::queue<JobData> taskQueue_;
 
+	/// @brief サーバIPアドレス
 	std::string serverIP_;
+
+	/// @brief サーバポート番号
 	uint16_t    serverPort_;
+
+	/// @brief サーバへの接続を試みるのは初めてか
+	bool firstTry_;
 };

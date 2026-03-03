@@ -9,7 +9,6 @@ Server::Server() :
 	imageHeight_(0),
 	superSampleNum_(0),
 	sampleNum_(0),
-	wsaData_(),
 	listenSock_(0),
 	serverAddr_(),
 	connectedClients_(),
@@ -20,29 +19,27 @@ Server::Server() :
 
 Server::~Server()
 {
+	for (auto& c : connectedClients_)
+	{
+		closesocket(c.sock);
+	}
+
+	closesocket(listenSock_);
+	localClient_->Terminate();
+	delete localClient_;
 }
 
 int Server::Initialize(char** _argv)
 {
 	GetCommandLineArgs(_argv);
 
-	// 1. WinSock2.2 初期化
-	if (WSAStartup(MAKEWORD(2, 2), &wsaData_) != 0)
-	{
-		int errorCode{WSAGetLastError()};
-		std::cerr << "Error code : " << errorCode << std::endl;
-		std::cerr << "WSAStartup() failed." << std::endl;
-		return -1;
-	}
-
-	// 2. リスンソケットの作成
+	// リスンソケットの作成
 	listenSock_ = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
 	if (listenSock_ == INVALID_SOCKET)
 	{
 		int errorCode{WSAGetLastError()};
-		std::cerr << "Error code : " << errorCode << std::endl;
 		std::cerr << "socket() failed." << std::endl;
-		WSACleanup();
+		std::cerr << "Error code : " << errorCode << std::endl;
 		return -1;
 	}
 
@@ -51,9 +48,8 @@ int Server::Initialize(char** _argv)
 	if (ioctlsocket(listenSock_, FIONBIO, &arg) != 0)
 	{
 		int errorCode{WSAGetLastError()};
-		std::cerr << "Error code : " << errorCode << std::endl;
 		std::cerr << "ioctlsocket() failed." << std::endl;
-		WSACleanup();
+		std::cerr << "Error code : " << errorCode << std::endl;
 		closesocket(listenSock_);
 		return -1;
 	}
@@ -67,9 +63,8 @@ int Server::Initialize(char** _argv)
 	if (bind(listenSock_, (SOCKADDR*)&serverAddr_, sizeof(serverAddr_)) != 0)
 	{
 		int errorCode{WSAGetLastError()};
-		std::cerr << "Error code : " << errorCode << std::endl;
 		std::cerr << "bind() failed." << std::endl;
-		WSACleanup();
+		std::cerr << "Error code : " << errorCode << std::endl;
 		closesocket(listenSock_);
 		return -1;
 	}
@@ -77,9 +72,8 @@ int Server::Initialize(char** _argv)
 	if (listen(listenSock_, 5) != 0)
 	{
 		int errorCode{WSAGetLastError()};
-		std::cerr << "Error code : " << errorCode << std::endl;
 		std::cerr << "listen() failed." << std::endl;
-		WSACleanup();
+		std::cerr << "Error code : " << errorCode << std::endl;
 		closesocket(listenSock_);
 		return -1;
 	}
@@ -93,15 +87,7 @@ int Server::Initialize(char** _argv)
 
 int Server::Release()
 {
-	for (auto& c : connectedClients_)
-	{
-		closesocket(c.sock);
-	}
 
-	closesocket(listenSock_);
-	WSACleanup();
-	localClient_->Terminate();
-	delete localClient_;
 
 	return 0;
 

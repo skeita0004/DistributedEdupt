@@ -5,7 +5,6 @@
 #include <vector>
 
 #include "radiance.h"
-#include "ppm.h"
 #include "random.h"
 #include "render_data.h"
 
@@ -91,8 +90,6 @@ namespace edupt
 				}
 			}
 		}
-		// これは、サーバ側から呼ぶ(ここでは呼ばない)
-		// save_ppm_file(std::string("image.ppm"), image, _renderData.width, _renderData.height);
 		return 0;
 	}
 };

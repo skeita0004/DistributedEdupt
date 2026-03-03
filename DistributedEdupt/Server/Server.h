@@ -163,7 +163,6 @@ private:
 
 	int totalTileNum_;
 
-	WSADATA wsaData_;
 	SOCKET listenSock_;
 	SOCKADDR_IN serverAddr_;
 
