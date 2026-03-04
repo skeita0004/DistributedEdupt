@@ -49,6 +49,7 @@ int Server::Initialize(char** _argv)
 	imageHeight_ = atoi(_argv[2]);
 	superSampleNum_ = atoi(_argv[3]);
 	sampleNum_ = atoi(_argv[4]);
+	tileSize_ = atoi(_argv[5]);
 
 	// リスンソケットの作成
 	listenSock_ = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
@@ -142,8 +143,8 @@ void Server::JoinClient()
 void Server::PreparationSendData()
 {
 	// 処理データの用意
-	tileNumX_ = (int)std::ceil(imageWidth_  / (float)TILE_SIZE_);
-	tileNumY_ = (int)std::ceil(imageHeight_ / (float)TILE_SIZE_);
+	tileNumX_ = (int)std::ceil(imageWidth_  / (float)tileSize_);
+	tileNumY_ = (int)std::ceil(imageHeight_ / (float)tileSize_);
 
 	int loopNum = tileNumX_ * tileNumY_;
 	totalTileNum_ = loopNum;
@@ -159,12 +160,12 @@ void Server::PreparationSendData()
 	ffmpegArgs_ += ",hflip,vflip,crop=" + std::to_string(imageWidth_) + ":" + std::to_string(imageHeight_);
 	ffmpegArgs_ += ":0:0\" ./render_result.png";
 
-	std::vector<edupt::Color> initImage(TILE_SIZE_ * TILE_SIZE_, 0.0);
+	std::vector<edupt::Color> initImage(tileSize_ * tileSize_, 0.0);
 
 	for (int i = 0; i < loopNum; i++)
 	{
 		// レンダリング可視化用に、レンダリング前の画像を用意
-		edupt::save_ppm_file("out" + std::to_string(i) + ".ppm", initImage.data(), TILE_SIZE_, TILE_SIZE_);
+		edupt::save_ppm_file("out" + std::to_string(i) + ".ppm", initImage.data(), tileSize_, tileSize_);
 
 		std::string ppmToPng{ffmpegPath_ + " -loglevel quiet -y -i " + "out" + std::to_string(i) + ".ppm" + " out" + std::to_string(i) + ".png"};
 		system(ppmToPng.c_str());
@@ -173,11 +174,11 @@ void Server::PreparationSendData()
 		tmp.width       = imageWidth_;
 		tmp.height      = imageHeight_;
 
-		tmp.tileWidth   = TILE_SIZE_;
-		tmp.tileHeight  = TILE_SIZE_;
+		tmp.tileWidth   = tileSize_;
+		tmp.tileHeight  = tileSize_;
 
-		tmp.offsetX     = TILE_SIZE_ * (i % tileNumX_);
-		tmp.offsetY     = TILE_SIZE_ * (i / tileNumX_);
+		tmp.offsetX     = tileSize_ * (i % tileNumX_);
+		tmp.offsetY     = tileSize_ * (i / tileNumX_);
 
 		tmp.sample      = sampleNum_;
 		tmp.superSample = superSampleNum_;
@@ -267,10 +268,10 @@ void Server::RecvData()
 	for (auto client = connectedClients_.begin(); client != connectedClients_.end();)
 	{
 		// レンダリング済みタイルの要素数
-		const int IMAGE_ARRAY_SIZE{TILE_SIZE_ * TILE_SIZE_};
+		int IMAGE_ARRAY_SIZE{tileSize_ * tileSize_};
 
 		// 受信するデータ本体のサイズ
-		const int RECV_BUF_SIZE{sizeof(int) + sizeof(edupt::Color) * IMAGE_ARRAY_SIZE};
+		int RECV_BUF_SIZE{(int)sizeof(int) + (int)sizeof(edupt::Color) * IMAGE_ARRAY_SIZE};
 		
 		// 合計受信データサイズ
 		int totalRet{0};
@@ -394,8 +395,8 @@ void Server::RecvData()
 
 			edupt::save_ppm_file("out" + std::to_string(tmp.id) + ".ppm",
 								 tmp.renderResult.data(), 
-								 TILE_SIZE_,
-								 TILE_SIZE_);
+								 tileSize_,
+								 tileSize_);
 
 			std::string ppmToPng{ffmpegPath_ + " -loglevel quiet -y -i " + "out" + std::to_string(tmp.id) + ".ppm" + " out" + std::to_string(tmp.id) + ".png"};
 			system(ppmToPng.c_str());
@@ -530,7 +531,7 @@ void Server::LaunchViewer()
 						std::to_string(imageHeight_),
 						std::to_string(tileNumX_),
 						std::to_string(tileNumY_),
-						std::to_string(TILE_SIZE_)) == FALSE)
+						std::to_string(tileSize_)) == FALSE)
 	{
 		std::cerr << "ビューワの起動に失敗" << std::endl;
 		return;

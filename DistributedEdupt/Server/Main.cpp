@@ -7,10 +7,10 @@
 int main(int argc, char** argv)
 {
 	// 引数チェック(解像度、スーパーサンプル数、サンプル数)
-	if (argc != 5)
+	if (argc != 6)
 	{
 		std::cerr << "不正な引数です。" << std::endl;
-		std::cerr << "使用例: ./DEduptSV.exe width height supersample sample" << std::endl;
+		std::cerr << "使用例: ./DEduptSV.exe width height supersample sample tileSize" << std::endl;
 		return -1;
 	}
 
