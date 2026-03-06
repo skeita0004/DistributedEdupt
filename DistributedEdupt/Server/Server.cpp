@@ -1,7 +1,7 @@
 ﻿#define _CRT_SECURE_NO_WARNINGS
 
 #include "Server.h"
-#include "LocalClient.h"
+#include "SubProcess.h"
 #include "Viewer.h"
 
 #include "ppm.h"
@@ -32,13 +32,11 @@ Server::~Server()
 
 	if (localClient_)
 	{
-		localClient_->Terminate();
 		delete localClient_;
 	}
 
 	if (viewer_)
 	{
-		viewer_->Terminate();
 		delete viewer_;
 	}
 }
@@ -98,10 +96,10 @@ int Server::Initialize(char** _argv)
 
 	ShowServerIP();
 	
-	localClient_ = new LocalClient();
+	localClient_ = new SubProcess();
 	AcceptLocalClient();
 
-	viewer_ = new Viewer();
+	viewer_ = new SubProcess();
 
 	return 0;
 }
@@ -483,15 +481,15 @@ void Server::AcceptLocalClient()
 	
 	std::string localClientPath{LOCAL_CLIENT_EXEPATH_};
 	std::string ipAddress{LOCAL_CLIENT_IP_};
+	std::string portNum{std::to_string(PORT_)};
+
+	std::string cmdLine{localClientPath + ipAddress + portNum};
 
 #ifdef _DEBUG
-	localClientPath = "D:\\GE2A22\\home\\PG\\repos\\DistributedEdupt\\DistributedEdupt\\x64\\Debug\\Client.exe";
-	//localClientPath = "C:/Users/saito/source/repos/DistributedEdupt/DistributedEdupt/x64/Debug/Client.exe";
+	localClientPath = ".\\..\\x64\\Debug\\Client.exe";
 #endif
 
-	if (localClient_->Launch(localClientPath,
-		"127.0.0.1",
-		std::to_string(PORT_)) == FALSE)
+	if (localClient_->Launch(cmdLine, CREATE_NEW_CONSOLE) == FALSE)
 	{
 		std::cerr << "ローカルクライアントの起動に失敗" << std::endl;
 		return;
@@ -521,17 +519,19 @@ void Server::LaunchViewer()
 
 	std::string viewerPath{VIEWER_EXEPATH_};
 
+	std::string cmdLine{viewerPath + 
+		std::to_string(imageWidth_)+
+		std::to_string(imageHeight_) +
+		std::to_string(tileNumX_) +
+		std::to_string(tileNumY_) +
+		std::to_string(tileSize_)};
+
 	#ifdef _DEBUG
 	//localClientPath = "D:\\GE2A22\\home\\PG\\repos\\DistributedEdupt\\DistributedEdupt\\x64\\Debug\\Client.exe";
 	//localClientPath = "C:/Users/saito/source/repos/DistributedEdupt/DistributedEdupt/x64/Debug/Client.exe";
 	#endif
 
-	if (viewer_->Launch(viewerPath,
-						std::to_string(imageWidth_),
-						std::to_string(imageHeight_),
-						std::to_string(tileNumX_),
-						std::to_string(tileNumY_),
-						std::to_string(tileSize_)) == FALSE)
+	if (viewer_->Launch(cmdLine, 0) == FALSE)
 	{
 		std::cerr << "ビューワの起動に失敗" << std::endl;
 		return;

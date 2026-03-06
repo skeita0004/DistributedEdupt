@@ -1,5 +1,7 @@
 ﻿#pragma once
 
+#include "render_data.h"
+
 struct Tile
 {
 	Tile() :

@@ -1,7 +1,6 @@
 ﻿#ifndef _PPM_H_
 #define _PPM_H_
 
-
 #include <string>
 #include <cstdlib>
 #include <cstdio>
@@ -11,7 +10,6 @@
 
 namespace edupt
 {
-
 	inline double clamp(double x)
 	{
 		if (x < 0.0)
@@ -36,7 +34,6 @@ namespace edupt
 		}
 		fclose(f);
 	}
-
 };
 
 #endif

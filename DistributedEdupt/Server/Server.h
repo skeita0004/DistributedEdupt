@@ -15,8 +15,7 @@
 
 #pragma comment(lib, "ws2_32.lib")
 
-class LocalClient;
-class Viewer;
+class SubProcess;
 
 class Server
 {
@@ -91,6 +90,7 @@ private:
 	// サーバー自身のIPアドレスを取得する関数
 	void ShowServerIP();
 
+	// 接続済みクライアント一覧の表示
 	void DisplayMessage(const std::vector<ClientInfo>& clients);
 
 	inline static const uint16_t PORT_{8888};
@@ -118,6 +118,6 @@ private:
 	std::string ffmpegPath_;
 	std::string ffmpegArgs_;
 
-	LocalClient* localClient_;
-	Viewer*      viewer_;
+	SubProcess* localClient_;
+	SubProcess* viewer_;
 };
