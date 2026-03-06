@@ -19,7 +19,7 @@ namespace edupt
 		{
 		}
 
-		const char* Store(char* _p)
+		const char* ChangeEndianHtoN(char* _p)
 		{
 			int32_t tmp[] =
 			{
@@ -40,7 +40,7 @@ namespace edupt
 
 		/// @brief 構造体の中身をネットワークエンディアンからホストエンディアンへの変換
 		/// @return 変換済み構造体
-		RenderData Load()
+		RenderData ChangeEndianNtoH()
 		{
 			RenderData tmp{};
 

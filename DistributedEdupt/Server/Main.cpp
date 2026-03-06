@@ -62,7 +62,7 @@ int main(int argc, char** argv)
 		// 1.送信したタイルの数分、タイルを受信できるまで受信処理
 		server.RecvData();
 
-		if (server.GetRecvDataNum() >= server.GetTotalTileNum())
+		if (server.GetRenderResult().size() >= server.GetTotalTileNum())
 		{
 			break;
 		}

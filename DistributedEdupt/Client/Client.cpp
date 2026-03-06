@@ -20,7 +20,7 @@ Client::~Client()
 int Client::Initialize()
 {
 	//ソケット作成
-	sock_ = socket(AF_INET, SOCK_STREAM, 0);
+	sock_ = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
 	if (sock_ == INVALID_SOCKET)
 	{
 		int errorCode{WSAGetLastError()};
@@ -159,8 +159,9 @@ int Client::RecvData()
 			//ネットワークオーダーからホストオーダー変換
 			tmp.mySize = ntohll(tmp.mySize);
 			tmp.tile.id = ntohl(tmp.tile.id);
-			tmp.tile.renderData = tmp.tile.renderData.Load();
+			tmp.tile.renderData = tmp.tile.renderData.ChangeEndianNtoH();
 
+			// STATE_COMPLETE_SENDを受け取ったら受信処理を終了
 			if (tmp.status == STATE_COMPLETE_SEND)
 			{
 				return 0;

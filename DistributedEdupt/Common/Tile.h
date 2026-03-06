@@ -16,6 +16,6 @@ struct Tile
 	{
 	}
 
-	int id;
+	uint32_t id;
 	edupt::RenderData renderData;
 };

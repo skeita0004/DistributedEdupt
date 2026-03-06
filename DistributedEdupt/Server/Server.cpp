@@ -2,7 +2,6 @@
 
 #include "Server.h"
 #include "SubProcess.h"
-#include "Viewer.h"
 
 #include "ppm.h"
 
@@ -150,6 +149,7 @@ void Server::PreparationSendData()
 	ffmpegPath_ = ".\\resource\\ffmpeg.exe";
 
 #ifdef _DEBUG
+	// ffmpegのパスが通っていること前提
 	ffmpegPath_ = "ffmpeg";
 #endif
 
@@ -186,6 +186,7 @@ void Server::PreparationSendData()
 		renderData_.push_back(tile);
 	}
 
+	// このタイミングでビューワ起動
 	LaunchViewer();
 }
 
@@ -223,7 +224,7 @@ void Server::SendData()
 		memcpy(&data[index], &id, sizeof(id));
 		index += sizeof(id);
 
-		memcpy(&data[index], sendData.tile.renderData.Store(pRenderData), sizeof(edupt::RenderData));
+		memcpy(&data[index], sendData.tile.renderData.ChangeEndianHtoN(pRenderData), sizeof(edupt::RenderData));
 
 		// クライアントに対し、順番に送信
 		send(connectedClients_[i % connectedClients_.size()].sock, data, sizeof(JobData), 0);
@@ -255,7 +256,7 @@ void Server::SendData()
 		memcpy(&data[index], &id, sizeof(id));
 		index += sizeof(id);
 
-		memcpy(&data[index], sendData.tile.renderData.Store(pRenderData), sizeof(edupt::RenderData));
+		memcpy(&data[index], sendData.tile.renderData.ChangeEndianHtoN(pRenderData), sizeof(edupt::RenderData));
 
 		send(client.sock, data, sizeof(JobData), 0);
 	}
@@ -399,8 +400,6 @@ void Server::RecvData()
 			std::string ppmToPng{ffmpegPath_ + " -loglevel quiet -y -i " + "out" + std::to_string(tmp.id) + ".ppm" + " out" + std::to_string(tmp.id) + ".png"};
 			system(ppmToPng.c_str());
 
-			//client->headBuf.clear();
-			//client->bodyBuf.clear();
 			client->bodySize = 0;
 			client->headReceivedSize = 0;
 			client->bodyReceivedSize = 0;
@@ -527,8 +526,7 @@ void Server::LaunchViewer()
 		std::to_string(tileSize_)};
 
 	#ifdef _DEBUG
-	//localClientPath = "D:\\GE2A22\\home\\PG\\repos\\DistributedEdupt\\DistributedEdupt\\x64\\Debug\\Client.exe";
-	//localClientPath = "C:/Users/saito/source/repos/DistributedEdupt/DistributedEdupt/x64/Debug/Client.exe";
+	viewerPath = ".\\..\\x64\\Debug\\Viewer.exe"
 	#endif
 
 	if (viewer_->Launch(cmdLine, 0) == FALSE)

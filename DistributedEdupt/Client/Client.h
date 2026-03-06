@@ -31,12 +31,6 @@ public:
 		RUN_STATE_MAX
 	};
 
-	struct RenderResult
-	{
-		uint32_t id;
-		edupt::Color* image;
-	};
-
 	Client();
 	~Client();
 

@@ -61,11 +61,6 @@ public:
 		return totalTileNum_;
 	}
 
-	int GetRecvDataNum()
-	{
-		return static_cast<int>(renderResult_.size());
-	}
-
 	const std::string& GetffmpegArgs()
 	{
 		return ffmpegArgs_;

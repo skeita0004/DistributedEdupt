@@ -56,7 +56,7 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
 
 	std::vector<int> handles{};
 
-	// 画像を読み込めるまで
+	// 総タイル分の画像を読み込めるまで
 	while (true)
 	{
 		if (LoadTiles(tileNumX, tileNumY, handles))
