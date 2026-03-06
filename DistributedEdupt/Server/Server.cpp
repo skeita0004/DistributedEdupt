@@ -96,7 +96,7 @@ int Server::Initialize(char** _argv)
 	ShowServerIP();
 	
 	localClient_ = new SubProcess();
-	AcceptLocalClient();
+	JoinLocalClient();
 
 	viewer_ = new SubProcess();
 
@@ -474,7 +474,7 @@ void Server::SendDataStab()
 	}
 }
 
-void Server::AcceptLocalClient()
+void Server::JoinLocalClient()
 {
 	std::cout << "ローカルクライアント起動" << std::endl;
 	

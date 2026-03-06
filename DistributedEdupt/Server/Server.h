@@ -79,7 +79,7 @@ private:
 		std::string ip;
 	};
 
-	void AcceptLocalClient();
+	void JoinLocalClient();
 	void LaunchViewer();
 
 	// サーバー自身のIPアドレスを取得する関数
